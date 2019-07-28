@@ -1,7 +1,6 @@
 // Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
-import debounce from 'lodash/debounce';
 import {batchActions} from 'redux-batched-actions';
 
 import {
@@ -10,10 +9,10 @@ import {
     getChannelStats,
     getMyChannelMember,
     markChannelAsRead,
+    markChannelAsViewed,
     selectChannel,
 } from 'mattermost-redux/actions/channels';
 import {logout, loadMe} from 'mattermost-redux/actions/users';
-import {Client4} from 'mattermost-redux/client';
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
 import {getCurrentTeamId, getTeam, getMyTeams, getMyTeamMember, getTeamMemberships} from 'mattermost-redux/selectors/entities/teams';
 import {getCurrentUserId} from 'mattermost-redux/selectors/entities/users';
@@ -37,10 +36,8 @@ import LocalStorageStore from 'stores/local_storage_store';
 import WebSocketClient from 'client/web_websocket_client.jsx';
 
 import {ActionTypes, Constants, PostTypes, RHSStates} from 'utils/constants.jsx';
-import EventTypes from 'utils/event_types.jsx';
 import {filterAndSortTeamsByDisplayName} from 'utils/team_utils.jsx';
 import * as Utils from 'utils/utils.jsx';
-import {equalServerVersions} from 'utils/server_version';
 
 const dispatch = store.dispatch;
 const getState = store.getState;
@@ -72,13 +69,15 @@ export function emitChannelClickEvent(channel) {
 
             // Mark previous and next channel as read
             dispatch(markChannelAsRead(chan.id, oldChannelId));
-            reloadIfServerVersionChanged();
+            dispatch(markChannelAsViewed(chan.id, oldChannelId));
         });
 
         if (chan.delete_at === 0) {
             const penultimate = LocalStorageStore.getPreviousChannelName(userId, teamId);
-            LocalStorageStore.setPenultimateChannelName(userId, teamId, penultimate);
-            LocalStorageStore.setPreviousChannelName(userId, teamId, chan.name);
+            if (penultimate !== chan.name) {
+                LocalStorageStore.setPenultimateChannelName(userId, teamId, penultimate);
+                LocalStorageStore.setPreviousChannelName(userId, teamId, chan.name);
+            }
         }
 
         // When switching to a different channel if the pinned posts is showing
@@ -303,7 +302,7 @@ export async function redirectUserToDefaultTeam() {
     }
 
     if (userId && team) {
-        let channelName = LocalStorageStore.getPreviousChannelName(userId, teamId);
+        let channelName = LocalStorageStore.getPreviousChannelName(userId, team.id);
         const channel = getChannelByName(state, channelName);
         if (channel && channel.team_id === team.id) {
             dispatch(selectChannel(channel.id));
@@ -319,31 +318,4 @@ export async function redirectUserToDefaultTeam() {
     } else {
         browserHistory.push('/select_team');
     }
-}
-
-export const postListScrollChange = debounce(() => {
-    AppDispatcher.handleViewAction({
-        type: EventTypes.POST_LIST_SCROLL_CHANGE,
-        value: false,
-    });
-});
-
-export function postListScrollChangeToBottom() {
-    AppDispatcher.handleViewAction({
-        type: EventTypes.POST_LIST_SCROLL_CHANGE,
-        value: true,
-    });
-}
-
-let serverVersion = '';
-
-export function reloadIfServerVersionChanged() {
-    const newServerVersion = Client4.getServerVersion();
-
-    if (serverVersion && !equalServerVersions(serverVersion, newServerVersion)) {
-        console.log(`Detected version update from ${serverVersion} to ${newServerVersion}; refreshing the page`); //eslint-disable-line no-console
-        window.location.reload(true);
-    }
-
-    serverVersion = newServerVersion;
 }

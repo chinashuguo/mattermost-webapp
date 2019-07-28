@@ -127,9 +127,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            border: none;
+            padding: 0;
 
             span {
                 font-size: 22px;
+                margin-top: -3px;
             }
         }
 
@@ -225,7 +228,7 @@
 
                 .section-min {
                     padding: 1em 0;
-                    margin-bottom: 0;
+                    margin: 0;
                     cursor: pointer;
                     position: relative;
                     @include clearfix;
@@ -379,7 +382,6 @@
                     .custom-label {
                         font-size: 12px;
                         font-weight: normal;
-                        margin-bottom: 0;
                         overflow: hidden;
                         text-overflow: ellipsis;
                         white-space: nowrap;
@@ -498,6 +500,11 @@
                     padding: 4px 10px;
                 }
             }
+        }
+        .disabledMessage {
+            background-color: rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-top: 10px;
         }
     }
 

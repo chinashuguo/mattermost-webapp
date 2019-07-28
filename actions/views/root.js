@@ -6,6 +6,7 @@ import * as UserActions from 'mattermost-redux/actions/users';
 import {Client4} from 'mattermost-redux/client';
 
 import {ActionTypes} from 'utils/constants';
+import en from 'i18n/en.json';
 
 export function loadMeAndConfig() {
     return async (dispatch) => {
@@ -25,9 +26,37 @@ export function loadMeAndConfig() {
     };
 }
 
+const pluginTranslationSources = {};
+
+export function registerPluginTranslationsSource(pluginId, sourceFunction) {
+    pluginTranslationSources[pluginId] = sourceFunction;
+}
+
+export function unregisterPluginTranslationsSource(pluginId) {
+    Reflect.deleteProperty(pluginTranslationSources, pluginId);
+}
+
 export function loadTranslations(locale, url) {
     return (dispatch) => {
-        Client4.getTranslations(url).then((translations) => {
+        const translations = {};
+        Object.values(pluginTranslationSources).forEach((pluginFunc) => {
+            Object.assign(translations, pluginFunc(locale));
+        });
+
+        // No need to go to the server for EN
+        if (locale === 'en') {
+            Object.assign(translations, en);
+            dispatch({
+                type: ActionTypes.RECEIVED_TRANSLATIONS,
+                data: {
+                    locale,
+                    translations,
+                },
+            });
+            return;
+        }
+        Client4.getTranslations(url).then((serverTranslations) => {
+            Object.assign(translations, serverTranslations);
             dispatch({
                 type: ActionTypes.RECEIVED_TRANSLATIONS,
                 data: {
@@ -40,10 +69,16 @@ export function loadTranslations(locale, url) {
 }
 
 export function clearUserCookie() {
-    // We need to clear the cookie both with and without the domain set because we can't tell if the server set
-    // the cookie with it. At this time, the domain will be set if ServiceSettings.EnableCookiesForSubdomains is true.
+    // We need to clear the cookie without the domain, with the domain, and with both the domain and path set because we
+    // can't tell if the server set the cookie with or without the domain.
+    // The server will have set the domain if ServiceSettings.EnableCookiesForSubdomains is true
+    // The server will have set a non-default path if Mattermost is also served from a subpath.
     document.cookie = 'MMUSERID=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=/';
+    document.cookie = `MMUSERID=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=${window.basename}`;
     document.cookie = `MMUSERID=;expires=Thu, 01 Jan 1970 00:00:01 GMT;domain=${window.location.hostname};path=/`;
+    document.cookie = `MMUSERID=;expires=Thu, 01 Jan 1970 00:00:01 GMT;domain=${window.location.hostname};path=${window.basename}`;
     document.cookie = 'MMCSRF=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=/';
+    document.cookie = `MMCSRF=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=${window.basename}`;
     document.cookie = `MMCSRF=;expires=Thu, 01 Jan 1970 00:00:01 GMT;domain=${window.location.hostname};path=/`;
+    document.cookie = `MMCSRF=;expires=Thu, 01 Jan 1970 00:00:01 GMT;domain=${window.location.hostname};path=${window.basename}`;
 }

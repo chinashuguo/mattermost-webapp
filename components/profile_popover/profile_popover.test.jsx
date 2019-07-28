@@ -17,16 +17,50 @@ describe('components/ProfilePopover', () => {
         currentTeamId: 'team_id',
         isChannelAdmin: false,
         isTeamAdmin: false,
+        isInCurrentTeam: true,
         teamUrl: '',
+        canManageAnyChannelMembersInCurrentTeam: true,
         actions: {
             getMembershipForCurrentEntities: jest.fn(),
             openDirectChannelToUserId: jest.fn(),
             openModal: jest.fn(),
+            loadBot: jest.fn(),
         },
     };
 
     test('should match snapshot', () => {
         const props = {...baseProps};
+
+        const wrapper = shallowWithIntl(
+            <ProfilePopover {...props}/>
+        ).dive();
+        expect(wrapper).toMatchSnapshot();
+    });
+
+    test('should have bot description', () => {
+        const props = {
+            ...baseProps,
+            user: {
+                is_bot: true,
+                bot_description: 'bot description',
+            },
+        };
+
+        const wrapper = shallowWithIntl(
+            <ProfilePopover {...props}/>
+        ).dive();
+        expect(wrapper.containsMatchingElement(
+            <div
+                key='bot-description'
+            >
+                {'bot description'}
+            </div>
+        )).toEqual(true);
+    });
+
+    test('should hide add-to-channel option if not on team', () => {
+        const props = {...baseProps};
+        props.isInCurrentTeam = false;
 
         const wrapper = shallowWithIntl(
             <ProfilePopover {...props}/>

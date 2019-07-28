@@ -2,7 +2,7 @@
 // See LICENSE.txt for license information.
 
 import React from 'react';
-import {FormattedMessage} from 'react-intl';
+import {intlShape} from 'react-intl';
 import PropTypes from 'prop-types';
 
 import {browserHistory} from 'utils/browser_history';
@@ -34,6 +34,11 @@ export default class SidebarChannel extends React.PureComponent {
          * Channel display name
          */
         channelDisplayName: PropTypes.string.isRequired,
+
+        /**
+         * LHS bot icon image url
+         */
+        botIconUrl: PropTypes.string,
 
         /**
          * Channel is muted
@@ -74,6 +79,11 @@ export default class SidebarChannel extends React.PureComponent {
          * Teammate delete at date (for direct messages)
          */
         channelTeammateDeletedAt: PropTypes.number,
+
+        /**
+         * Teammate is_bot (for direct messages)
+         */
+        channelTeammateIsBot: PropTypes.bool,
 
         /**
          * Whether the channel contains a draft in the center channel
@@ -137,11 +147,17 @@ export default class SidebarChannel extends React.PureComponent {
 
         channelIsArchived: PropTypes.bool.isRequired,
 
+        redirectChannel: PropTypes.string.isRequired,
+
         actions: PropTypes.shape({
             savePreferences: PropTypes.func.isRequired,
             leaveChannel: PropTypes.func.isRequired,
             openLhs: PropTypes.func.isRequired,
         }).isRequired,
+    }
+
+    static contextTypes = {
+        intl: intlShape.isRequired,
     }
 
     isLeaving = false;
@@ -181,7 +197,7 @@ export default class SidebarChannel extends React.PureComponent {
         }
 
         if (this.props.active) {
-            browserHistory.push(`/${this.props.currentTeamName}/channels/${Constants.DEFAULT_CHANNEL}`);
+            browserHistory.push(`/${this.props.currentTeamName}/channels/${this.props.redirectChannel}`);
         }
     }
 
@@ -262,15 +278,12 @@ export default class SidebarChannel extends React.PureComponent {
 
         let displayName = '';
         if (this.props.currentUserId === this.props.channelTeammateId) {
-            displayName = (
-                <FormattedMessage
-                    id='sidebar.directchannel.you'
-                    defaultMessage='{displayname} (you)'
-                    values={{
-                        displayname: this.props.channelDisplayName,
-                    }}
-                />
-            );
+            displayName = this.context.intl.formatMessage({
+                id: 'sidebar.directchannel.you',
+                defaultMessage: '{displayname} (you)',
+            }, {
+                displayname: this.props.channelDisplayName,
+            });
         } else {
             displayName = this.props.channelDisplayName;
         }
@@ -286,16 +299,20 @@ export default class SidebarChannel extends React.PureComponent {
                     rowClass={rowClass}
                     channelId={this.props.channelId}
                     channelName={this.props.channelName}
+                    botIconUrl={this.props.botIconUrl}
                     channelStatus={this.props.channelStatus}
                     channelType={this.props.channelType}
                     displayName={displayName}
                     handleClose={closeHandler}
                     hasDraft={this.props.hasDraft}
                     badge={badge}
+                    showUnreadForMsgs={this.props.showUnreadForMsgs}
                     unreadMentions={this.props.unreadMentions}
+                    unreadMsgs={this.props.unreadMsgs}
                     membersCount={this.props.membersCount}
                     teammateId={this.props.channelTeammateId}
                     teammateDeletedAt={this.props.channelTeammateDeletedAt}
+                    teammateIsBot={this.props.channelTeammateIsBot}
                     channelIsArchived={this.props.channelIsArchived}
                 />
                 {tutorialTip}

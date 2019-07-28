@@ -31,11 +31,13 @@ export default class ElasticsearchSettings extends AdminSettings {
 
     getConfigFromState(config) {
         config.ElasticsearchSettings.ConnectionUrl = this.state.connectionUrl;
+        config.ElasticsearchSettings.SkipTLSVerification = this.state.skipTLSVerification;
         config.ElasticsearchSettings.Username = this.state.username;
         config.ElasticsearchSettings.Password = this.state.password;
         config.ElasticsearchSettings.Sniff = this.state.sniff;
         config.ElasticsearchSettings.EnableIndexing = this.state.enableIndexing;
         config.ElasticsearchSettings.EnableSearching = this.state.enableSearching;
+        config.ElasticsearchSettings.EnableAutocomplete = this.state.enableAutocomplete;
 
         return config;
     }
@@ -43,11 +45,13 @@ export default class ElasticsearchSettings extends AdminSettings {
     getStateFromConfig(config) {
         return {
             connectionUrl: config.ElasticsearchSettings.ConnectionUrl,
+            skipTLSVerification: config.ElasticsearchSettings.SkipTLSVerification,
             username: config.ElasticsearchSettings.Username,
             password: config.ElasticsearchSettings.Password,
             sniff: config.ElasticsearchSettings.Sniff,
             enableIndexing: config.ElasticsearchSettings.EnableIndexing,
             enableSearching: config.ElasticsearchSettings.EnableSearching,
+            enableAutocomplete: config.ElasticsearchSettings.EnableAutocomplete,
             configTested: true,
             canSave: true,
             canPurgeAndIndex: config.ElasticsearchSettings.EnableIndexing,
@@ -59,6 +63,7 @@ export default class ElasticsearchSettings extends AdminSettings {
             if (value === false) {
                 this.setState({
                     enableSearching: false,
+                    enableAutocomplete: false,
                 });
             } else {
                 this.setState({
@@ -68,14 +73,14 @@ export default class ElasticsearchSettings extends AdminSettings {
             }
         }
 
-        if (id === 'connectionUrl' || id === 'username' || id === 'password' || id === 'sniff') {
+        if (id === 'connectionUrl' || id === 'skipTLSVerification' || id === 'username' || id === 'password' || id === 'sniff') {
             this.setState({
                 configTested: false,
                 canSave: false,
             });
         }
 
-        if (id !== 'enableSearching') {
+        if (id !== 'enableSearching' && id !== 'enableAutocomplete') {
             this.setState({
                 canPurgeAndIndex: false,
             });
@@ -210,6 +215,25 @@ export default class ElasticsearchSettings extends AdminSettings {
                     onChange={this.handleSettingChanged}
                     setByEnv={this.isSetByEnv('ElasticsearchSettings.ConnectionUrl')}
                 />
+                <BooleanSetting
+                    id='skipTLSVerification'
+                    label={
+                        <FormattedMessage
+                            id='admin.elasticsearch.skipTLSVerificationTitle'
+                            defaultMessage='Skip TLS Verification:'
+                        />
+                    }
+                    helpText={
+                        <FormattedMessage
+                            id='admin.elasticsearch.skipTLSVerificationDescription'
+                            defaultMessage='When true, Mattermost will not require the Elasticsearch certificate to be signed by a trusted Certificate Authority.'
+                        />
+                    }
+                    value={this.state.skipTLSVerification}
+                    disabled={!this.state.enableIndexing}
+                    onChange={this.handleSettingChanged}
+                    setByEnv={this.isSetByEnv('ElasticsearchSettings.SkipTLSVerification')}
+                />
                 <TextSetting
                     id='username'
                     label={
@@ -270,6 +294,7 @@ export default class ElasticsearchSettings extends AdminSettings {
                     setByEnv={this.isSetByEnv('ElasticsearchSettings.Sniff')}
                 />
                 <RequestButton
+                    id='testConfig'
                     requestAction={this.doTestConfig}
                     helpText={
                         <FormattedMessage
@@ -312,7 +337,7 @@ export default class ElasticsearchSettings extends AdminSettings {
                                 createJobHelpText={
                                     <FormattedMessage
                                         id='admin.elasticsearch.createJob.help'
-                                        defaultMessage='All posts in the database will be indexed from oldest to newest. Elasticsearch is available during indexing but search results may be incomplete until the indexing job is complete.'
+                                        defaultMessage='All users, channels and posts in the database will be indexed from oldest to newest. Elasticsearch is available during indexing but search results may be incomplete until the indexing job is complete.'
                                     />
                                 }
                                 getExtraInfoText={this.getExtraInfo}
@@ -321,11 +346,12 @@ export default class ElasticsearchSettings extends AdminSettings {
                     </div>
                 </div>
                 <RequestButton
+                    id='purgeIndexesSection'
                     requestAction={elasticsearchPurgeIndexes}
                     helpText={
                         <FormattedMessage
                             id='admin.elasticsearch.purgeIndexesHelpText'
-                            defaultMessage='Purging will entirely remove the index on the Elasticsearch server. Search results may be incomplete until a bulk index of the existing post database is rebuilt.'
+                            defaultMessage='Purging will entirely remove the indexes on the Elasticsearch server. Search results may be incomplete until a bulk index of the existing database is rebuilt.'
                         />
                     }
                     buttonText={
@@ -368,6 +394,25 @@ export default class ElasticsearchSettings extends AdminSettings {
                     disabled={!this.state.enableIndexing || !this.state.configTested}
                     onChange={this.handleSettingChanged}
                     setByEnv={this.isSetByEnv('ElasticsearchSettings.EnableSearching')}
+                />
+                <BooleanSetting
+                    id='enableAutocomplete'
+                    label={
+                        <FormattedMessage
+                            id='admin.elasticsearch.enableAutocompleteTitle'
+                            defaultMessage='Enable Elasticsearch for autocomplete queries:'
+                        />
+                    }
+                    helpText={
+                        <FormattedMessage
+                            id='admin.elasticsearch.enableAutocompleteDescription'
+                            defaultMessage='Requires a successful connection to the Elasticsearch server. When true, Elasticsearch will be used for all autocompletion queries on users and channels using the latest index. Autocompletion results may be incomplete until a bulk index of the existing users and channels database is finished. When false, database autocomplete is used.'
+                        />
+                    }
+                    value={this.state.enableAutocomplete}
+                    disabled={!this.state.enableIndexing || !this.state.configTested}
+                    onChange={this.handleSettingChanged}
+                    setByEnv={this.isSetByEnv('ElasticsearchSettings.EnableAutocomplete')}
                 />
             </SettingsGroup>
         );

@@ -7,7 +7,6 @@ import {FormattedMessage} from 'react-intl';
 import ReactSelect from 'react-select';
 
 import {Constants} from 'utils/constants.jsx';
-import {localizeMessage} from 'utils/utils.jsx';
 import SaveButton from 'components/save_button.jsx';
 
 import MultiSelectList from './multiselect_list.jsx';
@@ -22,6 +21,7 @@ export default class MultiSelect extends React.Component {
         optionRenderer: PropTypes.func,
         values: PropTypes.arrayOf(PropTypes.object),
         valueRenderer: PropTypes.func,
+        ariaLabelRenderer: PropTypes.func,
         handleInput: PropTypes.func,
         handleDelete: PropTypes.func,
         perPage: PropTypes.number,
@@ -36,6 +36,7 @@ export default class MultiSelect extends React.Component {
         submitImmediatelyOn: PropTypes.func,
         saving: PropTypes.bool,
         loading: PropTypes.bool,
+        placeholderText: PropTypes.string,
     }
 
     constructor(props) {
@@ -132,7 +133,7 @@ export default class MultiSelect extends React.Component {
         }
         this.selected = null;
 
-        this.props.handleInput(input);
+        this.props.handleInput(input, this);
     }
 
     onInputKeyDown = (e) => {
@@ -295,9 +296,24 @@ export default class MultiSelect extends React.Component {
             );
         }
 
+        let noItemsAriaLabel;
+        if (!optionsToDisplay || optionsToDisplay.length === 0) {
+            noItemsAriaLabel = (
+                <p className='primary-message'>
+                    <FormattedMessage
+                        id='multiselect.list.notFound'
+                        defaultMessage='No items found'
+                    />
+                </p>
+            );
+        }
+
         return (
             <div className='filtered-user-list'>
-                <div className='filter-row filter-row--full'>
+                <div
+                    className='filter-row filter-row--full'
+                    aria-hidden='true'
+                >
                     <div className='multi-select__container'>
                         <ReactSelect
                             id='selectItems'
@@ -316,9 +332,10 @@ export default class MultiSelect extends React.Component {
                             onKeyDown={this.onInputKeyDown}
                             onChange={this.onChange}
                             value={this.props.values}
-                            placeholder={localizeMessage('multiselect.placeholder', 'Search and add members')}
+                            placeholder={this.props.placeholderText}
                             inputValue={this.state.input}
                             getOptionValue={(option) => option.id}
+                            aria-label={this.props.placeholderText}
                         />
                         <SaveButton
                             id='saveItems'
@@ -337,10 +354,17 @@ export default class MultiSelect extends React.Component {
                         {noteTextContainer}
                     </div>
                 </div>
+                <div
+                    className='sr-only'
+                    aria-live='polite'
+                >
+                    {noItemsAriaLabel}
+                </div>
                 <MultiSelectList
                     ref='list'
                     options={optionsToDisplay}
                     optionRenderer={this.props.optionRenderer}
+                    ariaLabelRenderer={this.props.ariaLabelRenderer}
                     page={this.state.page}
                     perPage={this.props.perPage}
                     onPageChange={this.props.handlePageChange}

@@ -198,15 +198,21 @@ export default class AboutBuildModal extends React.PureComponent {
 
         return (
             <Modal
-                dialogClassName='about-modal'
+                dialogClassName='a11y__modal about-modal'
                 show={this.props.show}
                 onHide={this.doHide}
+                role='dialog'
+                aria-labelledby='aboutModalLabel'
             >
                 <Modal.Header closeButton={true}>
-                    <Modal.Title>
+                    <Modal.Title
+                        componentClass='h1'
+                        id='aboutModalLabel'
+                    >
                         <FormattedMessage
                             id='about.title'
-                            defaultMessage='About Mattermost'
+                            values={{appTitle: config.SiteName || 'Mattermost'}}
+                            defaultMessage='About {appTitle}'
                         />
                     </Modal.Title>
                 </Modal.Header>

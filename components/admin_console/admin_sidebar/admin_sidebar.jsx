@@ -4,18 +4,25 @@
 import $ from 'jquery';
 import PropTypes from 'prop-types';
 import React from 'react';
-import {FormattedMessage} from 'react-intl';
+import {FormattedMessage, intlShape} from 'react-intl';
+import {Tooltip, OverlayTrigger} from 'react-bootstrap';
 
 import * as Utils from 'utils/utils.jsx';
+import Constants from 'utils/constants.jsx';
+import {generateIndex} from 'utils/admin_console_index.jsx';
+import {browserHistory} from 'utils/browser_history';
+
 import AdminSidebarCategory from 'components/admin_console/admin_sidebar_category.jsx';
 import AdminSidebarHeader from 'components/admin_console/admin_sidebar_header';
 import AdminSidebarSection from 'components/admin_console/admin_sidebar_section.jsx';
 import AdminDefinition from 'components/admin_console/admin_definition.jsx';
+import Highlight from 'components/admin_console/highlight.jsx';
+import SearchIcon from 'components/svg/search_icon.jsx';
 
 export default class AdminSidebar extends React.Component {
     static get contextTypes() {
         return {
-            router: PropTypes.object.isRequired,
+            intl: intlShape.isRequired,
         };
     }
 
@@ -25,6 +32,8 @@ export default class AdminSidebar extends React.Component {
         plugins: PropTypes.object,
         buildEnterpriseReady: PropTypes.bool,
         siteName: PropTypes.string,
+        onFilterChange: PropTypes.func.isRequired,
+        navigationBlocked: PropTypes.bool.isRequired,
         actions: PropTypes.shape({
 
             /*
@@ -38,9 +47,23 @@ export default class AdminSidebar extends React.Component {
         plugins: {},
     }
 
+    constructor(props) {
+        super(props);
+        this.state = {
+            sections: null,
+            filter: '',
+        };
+        this.idx = null;
+        this.searchRef = React.createRef();
+    }
+
     componentDidMount() {
         if (this.props.config.PluginSettings.Enable) {
             this.props.actions.getPlugins();
+        }
+
+        if (this.searchRef.current) {
+            this.searchRef.current.focus();
         }
 
         this.updateTitle();
@@ -60,6 +83,45 @@ export default class AdminSidebar extends React.Component {
         }
     }
 
+    onFilterChange = (e) => {
+        const filter = e.target.value;
+        if (filter === '') {
+            this.setState({sections: null, filter});
+            this.props.onFilterChange(filter);
+            return;
+        }
+
+        if (this.idx === null) {
+            this.idx = generateIndex(this.context.intl);
+        }
+        let query = '';
+        for (const term of filter.split(' ')) {
+            term.trim();
+            if (term !== '') {
+                query += term + ' ';
+                query += term + '* ';
+            }
+        }
+        const sections = this.idx.search(query);
+        this.setState({sections, filter});
+        this.props.onFilterChange(filter);
+
+        if (this.props.navigationBlocked) {
+            return;
+        }
+
+        const validSection = sections.indexOf(browserHistory.location.pathname.replace('/admin_console/', '')) !== -1;
+        if (!validSection) {
+            const visibleSections = this.visibleSections();
+            for (const section of sections) {
+                if (visibleSections.has(section)) {
+                    browserHistory.replace('/admin_console/' + section);
+                    break;
+                }
+            }
+        }
+    }
+
     updateTitle = () => {
         let currentSiteName = '';
         if (this.props.siteName) {
@@ -69,106 +131,104 @@ export default class AdminSidebar extends React.Component {
         document.title = Utils.localizeMessage('sidebar_right_menu.console', 'System Console') + currentSiteName;
     }
 
-    renderSettingsMenu = (section) => {
-        const menuEntries = [];
-        Object.values(section).forEach((item) => {
+    visibleSections = () => {
+        const isVisible = (item) => {
             if (!item.schema) {
-                return;
+                return false;
             }
 
             if (!item.title) {
-                return;
+                return false;
             }
 
             if (item.isHidden && item.isHidden(this.props.config, {}, this.props.license, this.props.buildEnterpriseReady)) {
-                return;
+                return false;
             }
-
-            menuEntries.push((
-                <AdminSidebarSection
-                    key={item.url}
-                    name={item.url}
-                    title={
-                        <FormattedMessage
-                            id={item.title}
-                            defaultMessage={item.title_default}
-                        />
-                    }
-                />
-            ));
-        });
-
-        if (menuEntries.length === 0) {
-            return null;
-        }
-
-        // Special case for plugins entries
-        let extraEntries;
-        if (section.url === 'plugins') {
-            extraEntries = this.renderPluginsMenu();
-        }
-
-        return (
-            <AdminSidebarSection
-                key={section.url}
-                name={section.url}
-                type='text'
-                title={
-                    <FormattedMessage
-                        id={section.title}
-                        defaultMessage={section.title_default}
-                    />
+            return true;
+        };
+        const result = new Set();
+        for (const section of Object.values(AdminDefinition)) {
+            for (const item of Object.values(section)) {
+                if (isVisible(item)) {
+                    result.add(item.url);
                 }
-            >
-                {menuEntries}
-                {extraEntries}
-            </AdminSidebarSection>
-        );
+            }
+        }
+        return result;
     }
 
-    renderRootMenu = (section, icon, title, titleDefault) => {
-        const menuEntries = [];
-        Object.values(section).forEach((item) => {
-            if (!item.title) {
-                return;
-            }
-
-            if (item.isHidden && item.isHidden(this.props.config, {}, this.props.license, this.props.buildEnterpriseReady)) {
-                return;
-            }
-
-            menuEntries.push((
-                <AdminSidebarSection
-                    key={item.url}
-                    name={item.url}
-                    title={
-                        <FormattedMessage
-                            id={item.title}
-                            defaultMessage={item.title_default}
-                        />
-                    }
-                />
-            ));
-        });
-
-        if (menuEntries.length === 0) {
-            return null;
-        }
-
-        return (
-            <AdminSidebarCategory
-                parentLink='/admin_console'
-                icon={icon}
-                title={
-                    <FormattedMessage
-                        id={title}
-                        defaultMessage={titleDefault}
-                    />
+    renderRootMenu = (definition) => {
+        const sidebarSections = [];
+        Object.values(definition).forEach((section, sectionIndex) => {
+            const sidebarItems = [];
+            Object.values(section).forEach((item, itemIndex) => {
+                if (!item.title) {
+                    return;
                 }
-            >
-                {menuEntries}
-            </AdminSidebarCategory>
-        );
+
+                if (item.isHidden && item.isHidden(this.props.config, {}, this.props.license, this.props.buildEnterpriseReady)) {
+                    return;
+                }
+
+                if (this.state.sections !== null) {
+                    let active = false;
+                    for (const url of this.state.sections) {
+                        if (url === item.url) {
+                            active = true;
+                        }
+                    }
+                    if (!active) {
+                        return;
+                    }
+                }
+
+                sidebarItems.push((
+                    <AdminSidebarSection
+                        key={itemIndex}
+                        name={item.url}
+                        title={
+                            <FormattedMessage
+                                id={item.title}
+                                defaultMessage={item.title_default}
+                            />
+                        }
+                    />
+                ));
+            });
+
+            // If no visible items, don't display this section
+            if (sidebarItems.length === 0) {
+                return null;
+            }
+
+            // Special case for plugins entries
+            let moreSidebarItems;
+            if (section.id === 'plugins') {
+                moreSidebarItems = this.renderPluginsMenu();
+            }
+
+            if (sidebarItems.length) {
+                sidebarSections.push((
+                    <AdminSidebarCategory
+                        key={sectionIndex}
+                        parentLink='/admin_console'
+                        icon={section.icon}
+                        sectionClass=''
+                        title={
+                            <FormattedMessage
+                                id={section.sectionTitle}
+                                defaultMessage={section.sectionTitleDefault}
+                            />
+                        }
+                    >
+                        {sidebarItems}
+                        {moreSidebarItems}
+                    </AdminSidebarCategory>
+                ));
+            }
+            return null;
+        });
+        return sidebarSections;
     }
 
     renderPluginsMenu = () => {
@@ -182,15 +242,23 @@ export default class AdminSidebar extends React.Component {
 
                 return a.id.localeCompare(b.id);
             }).forEach((p) => {
-                const hasSettings = p.settings_schema && (p.settings_schema.header || p.settings_schema.footer || p.settings_schema.settings.length > 0);
+                const hasSettings = p.settings_schema && (p.settings_schema.header || p.settings_schema.footer || p.settings_schema.settings);
                 if (!hasSettings) {
                     return;
+                }
+
+                if (p.settings_schema.settings && (!p.settings_schema.header && !p.settings_schema.footer)) {
+                    if (p.settings_schema.settings.hasOwnProperty('length')) {
+                        if (p.settings_schema.settings.length === 0) {
+                            return;
+                        }
+                    }
                 }
 
                 customPlugins.push(
                     <AdminSidebarSection
                         key={'customplugin' + p.id}
-                        name={'custom/' + p.id}
+                        name={'plugins/plugin_' + p.id}
                         title={p.name}
                     />
                 );
@@ -199,28 +267,62 @@ export default class AdminSidebar extends React.Component {
         return customPlugins;
     }
 
+    handleClearFilter = () => {
+        this.setState({sections: null, filter: ''});
+        this.props.onFilterChange('');
+    }
+
     render() {
+        const filterClearTooltip = (
+            <Tooltip id='admin-sidebar-fitler-clear'>
+                <FormattedMessage
+                    id='admin.sidebar.filter-clear'
+                    defaultMessage='Clear search'
+                />
+            </Tooltip>
+        );
         return (
             <div className='admin-sidebar'>
                 <AdminSidebarHeader/>
                 <div className='nav-pills__container'>
-                    <ul className='nav nav-pills nav-stacked'>
-                        {this.renderRootMenu(AdminDefinition.reporting, 'fa-bar-chart', 'admin.sidebar.reports', 'REPORTING')}
-                        <AdminSidebarCategory
-                            sectionClass='sections--settings'
-                            parentLink='/admin_console'
-                            icon='fa-gear'
-                            title={
-                                <FormattedMessage
-                                    id='admin.sidebar.settings'
-                                    defaultMessage='SETTINGS'
+                    <Highlight filter={this.state.filter}>
+                        <ul className='nav nav-pills nav-stacked'>
+                            <li className='filter-container'>
+                                <SearchIcon
+                                    id='searchIcon'
+                                    className='search__icon'
+                                    aria-hidden='true'
                                 />
-                            }
-                        >
-                            {Object.values(AdminDefinition.settings).map(this.renderSettingsMenu)}
-                        </AdminSidebarCategory>
-                        {this.renderRootMenu(AdminDefinition.other, 'fa-wrench', 'admin.sidebar.other', 'OTHER')}
-                    </ul>
+                                <input
+                                    className={'filter ' + (this.state.filter ? 'active' : '')}
+                                    type='text'
+                                    onChange={this.onFilterChange}
+                                    value={this.state.filter}
+                                    placeholder={Utils.localizeMessage('admin.sidebar.filter', 'Find settings')}
+                                    ref={this.searchRef}
+                                />
+                                {this.state.filter &&
+                                    <div
+                                        className='sidebar__search-clear visible'
+                                        onClick={this.handleClearFilter}
+                                    >
+                                        <OverlayTrigger
+                                            delayShow={Constants.OVERLAY_TIME_DELAY}
+                                            placement='bottom'
+                                            overlay={filterClearTooltip}
+                                        >
+                                            <span
+                                                className='sidebar__search-clear-x'
+                                                aria-hidden='true'
+                                            >
+                                                {'×'}
+                                            </span>
+                                        </OverlayTrigger>
+                                    </div>}
+                            </li>
+                            {this.renderRootMenu(AdminDefinition)}
+                        </ul>
+                    </Highlight>
                 </div>
             </div>
         );

@@ -80,6 +80,7 @@ export default class DotMenu extends Component {
         isReadOnly: false,
         pluginMenuItems: [],
         location: Locations.CENTER,
+        enableEmojiPicker: false,
     }
 
     constructor(props) {
@@ -246,12 +247,14 @@ export default class DotMenu extends Component {
                 >
                     <button
                         id={`${this.props.location}_button_${this.props.post.id}`}
+                        aria-label={Utils.localizeMessage('post_info.dot_menu.tooltip.more_actions', 'More Actions').toLowerCase()}
                         className='post__dropdown color--link style--none'
                         type='button'
                         aria-expanded='false'
                     />
                 </OverlayTrigger>
                 <Menu
+                    id={`${this.props.location}_dropdown_${this.props.post.id}`}
                     openLeft={true}
                     openUp={this.state.openUp}
                     ref={this.refCallback}
@@ -289,11 +292,13 @@ export default class DotMenu extends Component {
                         onClick={this.handlePermalinkMenuItemActivated}
                     />
                     <MenuItemAction
+                        id={`unpin_post_${this.props.post.id}`}
                         show={!isSystemMessage && !this.props.isReadOnly && this.props.post.is_pinned}
                         text={Utils.localizeMessage('post_info.unpin', 'Unpin')}
                         onClick={this.handlePinMenuItemActivated}
                     />
                     <MenuItemAction
+                        id={`pin_post_${this.props.post.id}`}
                         show={!isSystemMessage && !this.props.isReadOnly && !this.props.post.is_pinned}
                         text={Utils.localizeMessage('post_info.pin', 'Pin')}
                         onClick={this.handlePinMenuItemActivated}

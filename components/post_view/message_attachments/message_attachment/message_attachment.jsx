@@ -4,8 +4,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 
-import {postListScrollChange} from 'actions/global_actions';
-
 import {getImageSrc} from 'utils/post_utils';
 import {isUrlSafe} from 'utils/url';
 import {handleFormattedTextClick} from 'utils/utils';
@@ -16,8 +14,7 @@ import SizeAwareImage from 'components/size_aware_image';
 
 import ActionButton from '../action_button';
 import ActionMenu from '../action_menu';
-
-const MAX_ATTACHMENT_TEXT_HEIGHT = 200;
+import LinkOnlyRenderer from 'utils/markdown/link_only_renderer';
 
 export default class MessageAttachment extends React.PureComponent {
     static propTypes = {
@@ -98,8 +95,6 @@ export default class MessageAttachment extends React.PureComponent {
             this.setState((prevState) => {
                 return {checkOverflow: prevState.checkOverflow + 1};
             });
-
-            postListScrollChange();
         }
     };
 
@@ -169,6 +164,7 @@ export default class MessageAttachment extends React.PureComponent {
         let rowPos = 0;
         let lastWasLong = false;
         let nrTables = 0;
+        const markdown = {markdown: false, mentionHighlight: false};
 
         fields.forEach((field, i) => {
             if (rowPos === 2 || !(field.short === true) || lastWasLong) {
@@ -201,7 +197,10 @@ export default class MessageAttachment extends React.PureComponent {
                     key={'attachment__field-caption-' + i + '__' + nrTables}
                     width='50%'
                 >
-                    {field.title}
+                    <Markdown
+                        message={field.title}
+                        options={markdown}
+                    />
                 </th>
             );
 
@@ -261,6 +260,7 @@ export default class MessageAttachment extends React.PureComponent {
             if (attachment.author_icon) {
                 author.push(
                     <img
+                        alt={'attachment author icon'}
                         className='attachment__author-icon'
                         src={getImageSrc(attachment.author_icon, this.props.hasImageProxy)}
                         key={'attachment__author-icon'}
@@ -314,7 +314,7 @@ export default class MessageAttachment extends React.PureComponent {
                             message={attachment.title}
                             options={{
                                 mentionHighlight: false,
-                                markdown: false,
+                                renderer: new LinkOnlyRenderer(),
                                 autolinkedUrlSchemes: [],
                             }}
                         />
@@ -329,7 +329,6 @@ export default class MessageAttachment extends React.PureComponent {
                 <ShowMore
                     checkOverflow={this.state.checkOverflow}
                     isAttachmentText={true}
-                    maxHeight={MAX_ATTACHMENT_TEXT_HEIGHT}
                     text={attachment.text}
                 >
                     <Markdown

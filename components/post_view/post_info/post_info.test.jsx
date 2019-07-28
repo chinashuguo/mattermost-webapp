@@ -31,10 +31,10 @@ describe('components/post_view/PostInfo', () => {
     const requiredProps = {
         post,
         handleCommentClick: jest.fn(),
+        handleCardClick: jest.fn(),
         handleDropdownOpened: jest.fn(),
         compactDisplay: false,
         replyCount: 0,
-        getPostList: jest.fn(),
         useMilitaryTime: false,
         isFlagged: false,
         hover: false,

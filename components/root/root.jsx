@@ -47,6 +47,8 @@ import loadCreateTeam from 'bundle-loader?lazy!components/create_team';
 import loadMfa from 'bundle-loader?lazy!components/mfa/mfa_controller';
 import store from 'stores/redux_store.jsx';
 import {getSiteURL} from 'utils/url.jsx';
+import {enableDevModeFeatures, isDevMode} from 'utils/utils';
+import A11yController from 'utils/a11y_controller';
 
 const CreateTeam = makeAsyncComponent(loadCreateTeam);
 const ErrorPage = makeAsyncComponent(loadErrorPage);
@@ -92,6 +94,8 @@ export default class Root extends React.Component {
 
     constructor(props) {
         super(props);
+        this.currentCategoryFocus = 0;
+        this.currentSidebarFocus = 0;
 
         // Redux
         setUrl(getSiteURL());
@@ -139,9 +143,18 @@ export default class Root extends React.Component {
         this.state = {
             configLoaded: false,
         };
+
+        // Keyboard navigation for accessibility
+        if (!UserAgent.isInternetExplorer()) {
+            this.a11yController = new A11yController();
+        }
     }
 
     onConfigLoaded = () => {
+        if (isDevMode()) {
+            enableDevModeFeatures();
+        }
+
         const segmentKey = Constants.DIAGNOSTICS_SEGMENT_KEY;
         const diagnosticId = this.props.diagnosticId;
 
@@ -182,13 +195,13 @@ export default class Root extends React.Component {
         /*eslint-enable */
 
         const afterIntl = () => {
-            initializePlugins();
-
             if (this.props.location.pathname === '/' && this.props.noAccounts) {
                 this.props.history.push('/signup_user_complete');
             }
 
-            this.setState({configLoaded: true});
+            initializePlugins().then(() => {
+                this.setState({configLoaded: true});
+            });
         };
         if (global.Intl) {
             afterIntl();

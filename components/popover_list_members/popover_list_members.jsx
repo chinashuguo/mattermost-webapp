@@ -215,36 +215,37 @@ export default class PopoverListMembers extends React.Component {
             </Tooltip>
         );
 
+        const ariaLabel = `${Utils.localizeMessage('channel_header.channelMembers', 'Members')}`.toLowerCase();
+
         return (
-            <div
-                id='channelMember'
-                className={'channel-header__icon wide ' + (this.state.showPopover ? 'active' : '')}
-            >
-                <OverlayTrigger
-                    trigger={['hover', 'focus']}
-                    delayShow={Constants.OVERLAY_TIME_DELAY}
-                    placement='bottom'
-                    overlay={channelMembersTooltip}
+            <div id='channelMember'>
+                <button
+                    id='member_popover'
+                    aria-label={ariaLabel}
+                    className={'style--none member-popover__trigger channel-header__icon wide ' + (this.state.showPopover ? 'active' : '')}
+                    ref='member_popover_target'
+                    onClick={this.handleGetProfilesInChannel}
                 >
-                    <div
-                        id='member_popover'
-                        className='member-popover__trigger'
-                        ref='member_popover_target'
-                        onClick={this.handleGetProfilesInChannel}
+                    <OverlayTrigger
+                        delayShow={Constants.OVERLAY_TIME_DELAY}
+                        placement='bottom'
+                        overlay={channelMembersTooltip}
                     >
-                        <span
-                            id='channelMemberCountText'
-                            className='icon__text'
-                        >
-                            {countText}
-                        </span>
-                        <MemberIcon
-                            id='channelMemberIcon'
-                            className='icon icon__members'
-                            aria-hidden='true'
-                        />
-                    </div>
-                </OverlayTrigger>
+                        <div>
+                            <span
+                                id='channelMemberCountText'
+                                className='icon__text'
+                            >
+                                {countText}
+                            </span>
+                            <MemberIcon
+                                id='channelMemberIcon'
+                                className='icon icon__members'
+                                aria-hidden='true'
+                            />
+                        </div>
+                    </OverlayTrigger>
+                </button>
                 <Overlay
                     rootClose={true}
                     onHide={this.closePopover}
@@ -259,6 +260,12 @@ export default class PopoverListMembers extends React.Component {
                     >
                         <div className='more-modal__header'>
                             {title}
+                            {this.props.channel.group_constrained && <div className='subhead'>
+                                <FormattedMessage
+                                    id='channel_header.groupConstrained'
+                                    defaultMessage='Members managed by linked groups.'
+                                />
+                            </div>}
                         </div>
                         <div className='more-modal__body'>
                             <div className='more-modal__list'>

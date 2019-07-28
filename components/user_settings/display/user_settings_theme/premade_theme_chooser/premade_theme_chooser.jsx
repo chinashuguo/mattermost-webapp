@@ -35,11 +35,13 @@ export default class PremadeThemeChooser extends React.Component {
                         key={'premade-theme-key' + k}
                     >
                         <div
+                            id={`premadeTheme${premadeTheme.type.replace(' ', '')}`}
                             className={activeClass}
                             onClick={() => this.props.updateTheme(premadeTheme)}
                         >
                             <label>
                                 <img
+                                    alt={'premade theme ' + k}
                                     className='img-responsive'
                                     src={premadeTheme.image}
                                 />

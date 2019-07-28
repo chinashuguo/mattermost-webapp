@@ -78,9 +78,11 @@ describe('components/SearchResultsItem', () => {
             isBusy: false,
             status: 'hello',
             enablePostUsernameOverride: false,
+            isBot: false,
             actions: {
                 closeRightHandSide: mockFunc,
                 selectPost: mockFunc,
+                selectPostCard: mockFunc,
                 setRhsExpanded: mockFunc,
             },
         };

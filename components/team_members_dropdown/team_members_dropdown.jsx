@@ -14,16 +14,22 @@ import Menu from 'components/widgets/menu/menu';
 import MenuWrapper from 'components/widgets/menu/menu_wrapper';
 import MenuItemAction from 'components/widgets/menu/menu_items/menu_item_action';
 
+const ROWS_FROM_BOTTOM_TO_OPEN_UP = 3;
+
 export default class TeamMembersDropdown extends React.Component {
     static propTypes = {
         user: PropTypes.object.isRequired,
         currentUser: PropTypes.object.isRequired,
         teamMember: PropTypes.object.isRequired,
         teamUrl: PropTypes.string.isRequired,
+        currentTeam: PropTypes.object.isRequired,
+        index: PropTypes.number.isRequired,
+        totalUsers: PropTypes.number.isRequired,
         actions: PropTypes.shape({
             getMyTeamMembers: PropTypes.func.isRequired,
             getMyTeamUnreads: PropTypes.func.isRequired,
             getUser: PropTypes.func.isRequired,
+            getTeamMember: PropTypes.func.isRequired,
             getTeamStats: PropTypes.func.isRequired,
             getChannelStats: PropTypes.func.isRequired,
             updateTeamMemberSchemeRoles: PropTypes.func.isRequired,
@@ -53,6 +59,7 @@ export default class TeamMembersDropdown extends React.Component {
                 this.setState({serverError: error.message});
             } else {
                 this.props.actions.getUser(this.props.user.id);
+                this.props.actions.getTeamMember(this.props.teamMember.team_id, this.props.user.id);
                 if (this.props.user.id === me.id) {
                     await this.props.actions.getMyTeamMembers();
                     this.props.actions.getMyTeamUnreads();
@@ -78,6 +85,7 @@ export default class TeamMembersDropdown extends React.Component {
                 this.setState({serverError: error.message});
             } else {
                 this.props.actions.getUser(this.props.user.id);
+                this.props.actions.getTeamMember(this.props.teamMember.team_id, this.props.user.id);
             }
         }
     }
@@ -122,36 +130,43 @@ export default class TeamMembersDropdown extends React.Component {
             );
         }
 
-        const teamMember = this.props.teamMember;
-        const user = this.props.user;
-        let currentRoles = (
-            <FormattedMessage
-                id='team_members_dropdown.member'
-                defaultMessage='Member'
-            />
-        );
+        const {currentTeam, teamMember, user} = this.props;
 
-        if ((teamMember.roles.length > 0 && Utils.isAdmin(teamMember.roles)) || teamMember.scheme_admin) {
+        let currentRoles = null;
+
+        if (Utils.isGuest(user)) {
             currentRoles = (
                 <FormattedMessage
-                    id='team_members_dropdown.teamAdmin'
-                    defaultMessage='Team Admin'
+                    id='team_members_dropdown.guest'
+                    defaultMessage='Guest'
                 />
             );
-        }
-
-        if (user.roles.length > 0 && Utils.isSystemAdmin(user.roles)) {
+        } else if (user.roles.length > 0 && Utils.isSystemAdmin(user.roles)) {
             currentRoles = (
                 <FormattedMessage
                     id='team_members_dropdown.systemAdmin'
                     defaultMessage='System Admin'
                 />
             );
+        } else if ((teamMember.roles.length > 0 && Utils.isAdmin(teamMember.roles)) || teamMember.scheme_admin) {
+            currentRoles = (
+                <FormattedMessage
+                    id='team_members_dropdown.teamAdmin'
+                    defaultMessage='Team Admin'
+                />
+            );
+        } else {
+            currentRoles = (
+                <FormattedMessage
+                    id='team_members_dropdown.member'
+                    defaultMessage='Member'
+                />
+            );
         }
 
         const me = this.props.currentUser;
-        let showMakeMember = (Utils.isAdmin(teamMember.roles) || teamMember.scheme_admin) && !Utils.isSystemAdmin(user.roles);
-        let showMakeAdmin = !Utils.isAdmin(teamMember.roles) && !Utils.isSystemAdmin(user.roles) && !teamMember.scheme_admin;
+        let showMakeMember = !Utils.isGuest(user) && (Utils.isAdmin(teamMember.roles) || teamMember.scheme_admin) && !Utils.isSystemAdmin(user.roles);
+        let showMakeAdmin = !Utils.isGuest(user) && !Utils.isAdmin(teamMember.roles) && !Utils.isSystemAdmin(user.roles) && !teamMember.scheme_admin;
 
         if (user.delete_at > 0) {
             currentRoles = (
@@ -164,10 +179,10 @@ export default class TeamMembersDropdown extends React.Component {
             showMakeAdmin = false;
         }
 
-        const canRemoveFromTeam = this.props.user.id !== me.id;
+        const canRemoveFromTeam = user.id !== me.id && !currentTeam.group_constrained;
 
         let makeDemoteModal = null;
-        if (this.props.user.id === me.id) {
+        if (user.id === me.id) {
             const title = (
                 <FormattedMessage
                     id='team_members_dropdown.confirmDemoteRoleTitle'
@@ -217,9 +232,16 @@ export default class TeamMembersDropdown extends React.Component {
             return <div>{currentRoles}</div>;
         }
 
+        const {index, totalUsers} = this.props;
+        let openUp = false;
+        if (totalUsers > ROWS_FROM_BOTTOM_TO_OPEN_UP && totalUsers - index <= ROWS_FROM_BOTTOM_TO_OPEN_UP) {
+            openUp = true;
+        }
+
         return (
             <MenuWrapper>
                 <button
+                    id={`teamMembersDropdown_${user.username}`}
                     className='dropdown-toggle theme color--link style--none'
                     type='button'
                     aria-expanded='true'
@@ -230,6 +252,7 @@ export default class TeamMembersDropdown extends React.Component {
                 <div>
                     <Menu
                         openLeft={true}
+                        openUp={openUp}
                         ariaLabel={Utils.localizeMessage('team_members_dropdown.menuAriaLabel', 'Team member role change')}
                     >
                         <MenuItemAction

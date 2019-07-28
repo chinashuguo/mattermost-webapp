@@ -97,6 +97,7 @@ export default class MultiSelectList extends React.Component {
 
         e.preventDefault();
         this.setState({selected});
+        this.setSelected(selected);
         this.props.onSelect(options[selected]);
     }
 
@@ -116,6 +117,13 @@ export default class MultiSelectList extends React.Component {
                 {option.label}
             </div>
         );
+    }
+
+    defaultAriaLabelRenderer(option) {
+        if (!option) {
+            return null;
+        }
+        return option.label;
     }
 
     render() {
@@ -155,10 +163,25 @@ export default class MultiSelectList extends React.Component {
 
         const optionControls = options.map((o, i) => renderer(o, this.state.selected === i, this.props.onAdd));
 
+        if (this.props.ariaLabelRenderer) {
+            renderer = this.props.ariaLabelRenderer;
+        } else {
+            renderer = this.defaultAriaLabelRenderer;
+        }
+        const selectedOption = options[this.state.selected];
+        const ariaLabel = renderer(selectedOption);
+
         return (
             <div className='more-modal__list'>
                 <div
+                    className='sr-only'
+                    aria-live='polite'
+                >
+                    {ariaLabel}
+                </div>
+                <div
                     ref='list'
+                    role='presentation'
                 >
                     {optionControls}
                 </div>
@@ -176,6 +199,7 @@ MultiSelectList.defaultProps = {
 MultiSelectList.propTypes = {
     options: PropTypes.arrayOf(PropTypes.object),
     optionRenderer: PropTypes.func,
+    ariaLabelRenderer: PropTypes.func,
     page: PropTypes.number,
     perPage: PropTypes.number,
     onPageChange: PropTypes.func,

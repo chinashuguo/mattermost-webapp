@@ -6,18 +6,15 @@ import {getEmojiImageUrl} from 'mattermost-redux/utils/emoji_utils';
 import emojiRegex from 'emoji-regex';
 
 import {formatWithRenderer} from 'utils/markdown';
-import RemoveMarkdown from 'utils/markdown/remove_markdown';
 import {getEmojiMap} from 'selectors/emojis';
 import store from 'stores/redux_store.jsx';
 
-import Constants from './constants.jsx';
 import * as Emoticons from './emoticons.jsx';
 import * as Markdown from './markdown';
 
-const removeMarkdown = new RemoveMarkdown();
 const punctuation = XRegExp.cache('[^\\pL\\d]');
 
-const AT_MENTION_PATTERN = /\B@([a-z0-9.\-_]*)/gi;
+const AT_MENTION_PATTERN = /\B@([a-z0-9.\-_]+)/gi;
 const UNICODE_EMOJI_REGEX = emojiRegex();
 const htmlEmojiPattern = /^<p>\s*(?:<img class="emoticon"[^>]*>|<span data-emoticon[^>]*>[^<]*<\/span>\s*|<span class="emoticon emoticon--unicode">[^<]*<\/span>\s*)+<\/p>$/;
 
@@ -44,6 +41,8 @@ const cjkPattern = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-
 // - team - The current team.
 // - proxyImages - If specified, images are proxied. Defaults to false.
 // - autolinkedUrlSchemes - An array of url schemes that will be allowed for autolinking. Defaults to autolinking with any url scheme.
+// - renderer - a custom renderer object to use in the formatWithRenderer function. Defaults to empty.
+// - minimumHashtagLength - Minimum number of characters in a hashtag. Defaults to 3.
 export function formatText(text, inputOptions) {
     if (!text || typeof text !== 'string') {
         return '';
@@ -59,9 +58,8 @@ export function formatText(text, inputOptions) {
         options.searchPatterns = parseSearchTerms(options.searchTerm).map(convertSearchTermToRegex);
     }
 
-    if (options.removeMarkdown) {
-        output = formatWithRenderer(output, removeMarkdown);
-        output = sanitizeHtml(output);
+    if (options.renderer) {
+        output = formatWithRenderer(output, options.renderer);
         output = doFormatText(output, options);
     } else if (!('markdown' in options) || options.markdown) {
         // the markdown renderer will call doFormatText as necessary
@@ -99,7 +97,7 @@ export function doFormatText(text, options) {
     }
 
     output = autolinkEmails(output, tokens);
-    output = autolinkHashtags(output, tokens);
+    output = autolinkHashtags(output, tokens, options.minimumHashtagLength);
 
     if (!('emoticons' in options) || options.emoticon) {
         output = Emoticons.handleEmoticons(output, tokens);
@@ -182,7 +180,7 @@ export function autolinkAtMentions(text, tokens) {
     let output = text;
 
     // handle @channel, @all, @here mentions first (purposely excludes trailing punctuation)
-    output = output.replace(/\B@(channel|all|here)/gi, replaceAtMentionWithToken);
+    output = output.replace(/\B@(channel|all|here)\b/gi, replaceAtMentionWithToken);
 
     // handle all other mentions (supports trailing punctuation)
     let match = output.match(AT_MENTION_PATTERN);
@@ -213,13 +211,13 @@ function autolinkChannelMentions(text, tokens, channelNamesMap, team) {
         return alias;
     }
 
-    function replaceChannelMentionWithToken(fullMatch, spacer, mention, channelName) {
+    function replaceChannelMentionWithToken(fullMatch, mention, channelName) {
         let channelNameLower = channelName.toLowerCase();
 
         if (channelMentionExists(channelNameLower)) {
             // Exact match
             const alias = addToken(channelNameLower, mention, escapeHtml(channelNamesMap[channelNameLower].display_name));
-            return spacer + alias;
+            return alias;
         }
 
         // Not an exact match, attempt to truncate any punctuation to see if we can find a channel
@@ -233,7 +231,7 @@ function autolinkChannelMentions(text, tokens, channelNamesMap, team) {
                     const suffix = originalChannelName.substr(c - 1);
                     const alias = addToken(channelNameLower, '~' + channelNameLower,
                         escapeHtml(channelNamesMap[channelNameLower].display_name));
-                    return spacer + alias + suffix;
+                    return alias + suffix;
                 }
             } else {
                 // If the last character is not punctuation, no point in going any further
@@ -245,7 +243,7 @@ function autolinkChannelMentions(text, tokens, channelNamesMap, team) {
     }
 
     let output = text;
-    output = output.replace(/(^|\s)(~([a-z0-9.\-_]*))/gi, replaceChannelMentionWithToken);
+    output = output.replace(/\B(~([a-z0-9.\-_]*))/gi, replaceChannelMentionWithToken);
 
     return output;
 }
@@ -339,7 +337,7 @@ function highlightCurrentMentions(text, tokens, mentionKeys = []) {
     return output;
 }
 
-function autolinkHashtags(text, tokens) {
+function autolinkHashtags(text, tokens, minimumHashtagLength = 3) {
     let output = text;
 
     var newTokens = new Map();
@@ -368,7 +366,7 @@ function autolinkHashtags(text, tokens) {
         const index = tokens.size;
         const alias = `$MM_HASHTAG${index}$`;
 
-        if (text.length < Constants.MIN_HASHTAG_LINK_LENGTH + 1) {
+        if (originalText.length < minimumHashtagLength + 1) {
             // too short to be a hashtag
             return fullMatch;
         }

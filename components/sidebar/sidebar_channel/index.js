@@ -4,6 +4,7 @@
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 
+import {Client4} from 'mattermost-redux/client';
 import {savePreferences} from 'mattermost-redux/actions/preferences';
 
 import {
@@ -11,8 +12,10 @@ import {
     getChannelsNameMapInCurrentTeam,
     makeGetChannel,
     shouldHideDefaultChannel,
+    getRedirectChannelNameForTeam,
 } from 'mattermost-redux/selectors/entities/channels';
 import {getMyChannelMemberships} from 'mattermost-redux/selectors/entities/common';
+import {getCurrentTeamId} from 'mattermost-redux/selectors/entities/teams';
 import {getUserIdsInChannels, getUser} from 'mattermost-redux/selectors/entities/users';
 import {getInt, getTeammateNameDisplaySetting} from 'mattermost-redux/selectors/entities/preferences';
 import {getConfig} from 'mattermost-redux/selectors/entities/general';
@@ -74,13 +77,19 @@ function makeMapStateToProps() {
         let channelTeammateId = '';
         let channelTeammateDeletedAt = 0;
         let channelTeammateUsername = '';
+        let channelTeammateIsBot = false;
         let channelDisplayName = channel.display_name;
+        let botIconUrl = null;
         if (channel.type === Constants.DM_CHANNEL) {
             teammate = getUser(state, channel.teammate_id);
             if (teammate) {
                 channelTeammateId = teammate.id;
                 channelTeammateDeletedAt = teammate.delete_at;
                 channelTeammateUsername = teammate.username;
+                channelTeammateIsBot = teammate.is_bot;
+            }
+            if (channelTeammateIsBot) {
+                botIconUrl = botIconImageUrl(teammate);
             }
 
             channelDisplayName = displayUsername(teammate, teammateNameDisplay, false);
@@ -101,6 +110,7 @@ function makeMapStateToProps() {
             channelId,
             channelName: channel.name,
             channelDisplayName,
+            botIconUrl,
             channelType: channel.type,
             channelStatus: channel.status,
             channelFake: channel.fake,
@@ -109,6 +119,7 @@ function makeMapStateToProps() {
             channelTeammateId,
             channelTeammateUsername,
             channelTeammateDeletedAt,
+            channelTeammateIsBot,
             hasDraft: draft && Boolean(draft.message.trim() || draft.fileInfos.length || draft.uploadsInProgress.length) && currentChannelId !== channel.id,
             showTutorialTip: enableTutorial && tutorialStep === Constants.TutorialSteps.CHANNEL_POPOVER,
             townSquareDisplayName: channelsByName[Constants.DEFAULT_CHANNEL] && channelsByName[Constants.DEFAULT_CHANNEL].display_name,
@@ -119,6 +130,7 @@ function makeMapStateToProps() {
             membersCount,
             shouldHideChannel,
             channelIsArchived: channel.delete_at !== 0,
+            redirectChannel: getRedirectChannelNameForTeam(state, getCurrentTeamId(state)),
         };
     };
 }
@@ -131,6 +143,13 @@ function mapDispatchToProps(dispatch) {
             openLhs,
         }, dispatch),
     };
+}
+
+/**
+ * Gets the LHS bot icon url for a given botUser.
+ */
+function botIconImageUrl(botUser) {
+    return `${Client4.getBotRoute(botUser.id)}/icon?_=${(botUser.last_picture_update || 0)}`;
 }
 
 export default connect(makeMapStateToProps, mapDispatchToProps, null, {withRef: true})(SidebarChannel);

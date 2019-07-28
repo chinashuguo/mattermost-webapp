@@ -28,6 +28,7 @@ exports[`components/post_view/MessageAttachment should call actions.doPostAction
         target="_blank"
       >
         <img
+          alt="attachment author icon"
           className="attachment__author-icon"
           height="14"
           key="attachment__author-icon"
@@ -61,7 +62,6 @@ exports[`components/post_view/MessageAttachment should call actions.doPostAction
           <Connect(ShowMore)
             checkOverflow={0}
             isAttachmentText={true}
-            maxHeight={200}
             text="short text"
           >
             <Connect(Markdown)
@@ -159,6 +159,7 @@ exports[`components/post_view/MessageAttachment should match snapshot 1`] = `
         target="_blank"
       >
         <img
+          alt="attachment author icon"
           className="attachment__author-icon"
           height="14"
           key="attachment__author-icon"
@@ -192,7 +193,6 @@ exports[`components/post_view/MessageAttachment should match snapshot 1`] = `
           <Connect(ShowMore)
             checkOverflow={0}
             isAttachmentText={true}
-            maxHeight={200}
             text="short text"
           >
             <Connect(Markdown)
@@ -247,6 +247,50 @@ exports[`components/post_view/MessageAttachment should match snapshot 1`] = `
 </div>
 `;
 
+exports[`components/post_view/MessageAttachment should match snapshot when the attachment has a link in the title 1`] = `
+<div
+  className="attachment "
+>
+  <div
+    className="attachment__content"
+  >
+    <div
+      className="clearfix attachment__container attachment__container--undefined"
+    >
+      <h1
+        className="attachment__title"
+      >
+        <Connect(Markdown)
+          message="Do you like https://mattermost.com?"
+          options={
+            Object {
+              "autolinkedUrlSchemes": Array [],
+              "mentionHighlight": false,
+              "renderer": LinkOnlyRenderer {
+                "options": Object {},
+              },
+            }
+          }
+        />
+      </h1>
+      <div>
+        <div
+          className="attachment__body attachment__body--no_thumb"
+          onClick={[Function]}
+        />
+        <div
+          style={
+            Object {
+              "clear": "both",
+            }
+          }
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 exports[`components/post_view/MessageAttachment should match snapshot when the attachment has an emoji in the title 1`] = `
 <div
   className="attachment "
@@ -265,8 +309,10 @@ exports[`components/post_view/MessageAttachment should match snapshot when the a
           options={
             Object {
               "autolinkedUrlSchemes": Array [],
-              "markdown": false,
               "mentionHighlight": false,
+              "renderer": LinkOnlyRenderer {
+                "options": Object {},
+              },
             }
           }
         />
@@ -307,8 +353,10 @@ exports[`components/post_view/MessageAttachment should match snapshot when the a
           options={
             Object {
               "autolinkedUrlSchemes": Array [],
-              "markdown": false,
               "mentionHighlight": false,
+              "renderer": LinkOnlyRenderer {
+                "options": Object {},
+              },
             }
           }
         />
@@ -354,7 +402,15 @@ exports[`components/post_view/MessageAttachment should match value on getFieldsT
           className="attachment-field__caption"
           width="50%"
         >
-          title_1
+          <Connect(Markdown)
+            message="title_1"
+            options={
+              Object {
+                "markdown": false,
+                "mentionHighlight": false,
+              }
+            }
+          />
         </th>
       </tr>
     </thead>
@@ -379,7 +435,15 @@ exports[`components/post_view/MessageAttachment should match value on getFieldsT
           className="attachment-field__caption"
           width="50%"
         >
-          title_2
+          <Connect(Markdown)
+            message="title_2"
+            options={
+              Object {
+                "markdown": false,
+                "mentionHighlight": false,
+              }
+            }
+          />
         </th>
       </tr>
     </thead>

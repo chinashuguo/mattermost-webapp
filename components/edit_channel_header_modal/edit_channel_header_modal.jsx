@@ -182,13 +182,19 @@ class EditChannelHeaderModal extends React.PureComponent {
 
         return (
             <Modal
+                dialogClassName='a11y__modal'
                 show={this.state.show}
                 onHide={this.onHide}
                 onEntering={this.handleEntering}
                 onExited={this.props.onHide}
+                role='dialog'
+                aria-labelledby='editChannelHeaderModalLabel'
             >
                 <Modal.Header closeButton={true}>
-                    <Modal.Title>
+                    <Modal.Title
+                        componentClass='h1'
+                        id='editChannelHeaderModalLabel'
+                    >
                         {headerTitle}
                     </Modal.Title>
                 </Modal.Header>

@@ -39,14 +39,6 @@ export default class FileAttachmentList extends React.Component {
         isEmbedVisible: PropTypes.bool,
 
         locale: PropTypes.string.isRequired,
-
-        actions: PropTypes.shape({
-
-            /*
-            * Function to get file metadata for a post
-            */
-            getMissingFilesForPost: PropTypes.func.isRequired,
-        }).isRequired,
     }
 
     constructor(props) {
@@ -55,12 +47,6 @@ export default class FileAttachmentList extends React.Component {
         this.handleImageClick = this.handleImageClick.bind(this);
 
         this.state = {showPreviewModal: false, startImgIndex: 0};
-    }
-
-    componentDidMount() {
-        if ((this.props.post.file_ids || this.props.post.filenames) && !this.props.post.metadata) {
-            this.props.actions.getMissingFilesForPost(this.props.post.id);
-        }
     }
 
     handleImageClick(indexClicked) {
@@ -136,6 +122,7 @@ export default class FileAttachmentList extends React.Component {
                     onModalDismissed={this.hidePreviewModal}
                     startIndex={this.state.startImgIndex}
                     fileInfos={sortedFileInfos}
+                    postId={this.props.post.id}
                 />
             </React.Fragment>
         );

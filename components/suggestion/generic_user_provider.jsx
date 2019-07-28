@@ -7,6 +7,9 @@ import {Client4} from 'mattermost-redux/client';
 import {autocompleteUsers} from 'actions/user_actions.jsx';
 import * as Utils from 'utils/utils.jsx';
 
+import GuestBadge from 'components/widgets/badges/guest_badge.jsx';
+import BotBadge from 'components/widgets/badges/bot_badge.jsx';
+
 import Provider from './provider.jsx';
 import Suggestion from './suggestion.jsx';
 
@@ -37,6 +40,7 @@ class UserSuggestion extends Suggestion {
                 {...Suggestion.baseProps}
             >
                 <img
+                    alt={''}
                     className='admin-setting-user__image'
                     src={Client4.getUsersRoute() + '/' + item.id + '/image?_=' + (item.last_picture_update || 0)}
                 />
@@ -47,6 +51,8 @@ class UserSuggestion extends Suggestion {
                     {' '}
                     {description}
                 </span>
+                <BotBadge show={Boolean(item.is_bot)}/>
+                <GuestBadge show={Utils.isGuest(item)}/>
             </div>
         );
     }

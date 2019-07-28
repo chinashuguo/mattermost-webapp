@@ -301,6 +301,10 @@ function renderChannelDeletedMessage(post) {
     );
 }
 
+function renderMeMessage(post) {
+    return renderFormattedText((post.props && post.props.message) ? post.props.message : post.message);
+}
+
 const systemMessageRenderers = {
     [Posts.POST_TYPES.JOIN_CHANNEL]: renderJoinChannelMessage,
     [Posts.POST_TYPES.LEAVE_CHANNEL]: renderLeaveChannelMessage,
@@ -315,6 +319,7 @@ const systemMessageRenderers = {
     [Posts.POST_TYPES.CONVERT_CHANNEL]: renderConvertChannelToPrivateMessage,
     [Posts.POST_TYPES.PURPOSE_CHANGE]: renderPurposeChangeMessage,
     [Posts.POST_TYPES.CHANNEL_DELETED]: renderChannelDeletedMessage,
+    [Posts.POST_TYPES.ME]: renderMeMessage,
 };
 
 export function renderSystemMessage(post, channel) {
@@ -330,8 +335,9 @@ export function renderSystemMessage(post, channel) {
             return (
                 <PostAddChannelMember
                     postId={addMemberProps.post_id}
-                    userIds={addMemberProps.user_ids}
-                    usernames={addMemberProps.usernames}
+                    userIds={addMemberProps.not_in_channel_user_ids}
+                    noGroupsUsernames={addMemberProps.not_in_groups_usernames}
+                    usernames={addMemberProps.not_in_channel_usernames}
                 />
             );
         }
